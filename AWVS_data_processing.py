@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 # author: s1g0day
 # create: 2025-02-24 16:24
-# update: 2025-02-26 15:20
+# update: 2025-03-03 16:38
 
 import os
 import sys
@@ -28,7 +28,6 @@ class AWVSManager:
         self.target_list = [] # 目标列表
         self.apikey = '' # apikey
         self.profile_id = '' # 扫描漏洞类型
-        self.init_high_count = 0 # 初始化高危漏洞数量
         self.page = 1  # 初始化页码变量
         self.items_per_page = 100  # 每页的条目数
         self.total_count = 0  # 初始化总条目数变量
@@ -80,39 +79,54 @@ class AWVSManager:
         except Exception as e:
             print(e)
     # 定时循环检测高危漏洞数量，有变化即通知
-    def message_push(self):
-        while 1:
-            try:
-                time.sleep(30)
-                r2 = requests.get(self.awvs_url, headers=self.headers, timeout=30, verify=False)
-                result = json.loads(r2.content.decode())
-                high_count = 0
-                for xxxx in result['vulnerability_types']:
-                    high_count = high_count + xxxx['count']
-                if high_count != self.init_high_count:
-                    current_date = str(strftime("%Y-%m-%d %H:%M:%S", gmtime()))
-                    message_push = str(socket.gethostname()) + '\n' + current_date + '\n'
+    def message_push(self):#定时循环检测高危漏洞数量，有变化即通知
+        try:
+            get_target_url = self.awvs_url+'/api/v1/vulnerability_types?l=100&q=status:open;severity:3;'
+            r = requests.get(get_target_url, headers=self.headers, timeout=30, verify=False)
+            result = json.loads(r.content.decode())
+            #print(result)
+            init_high_count = 0
+            for xxxx in result['vulnerability_types']:
+                init_high_count=init_high_count+xxxx['count']
+            print('当前高危:',init_high_count)
+            while 1:
+                try:
+                    time.sleep(30)
+                    r2 = requests.get(get_target_url, headers=self.headers, timeout=30, verify=False)
+                    result = json.loads(r2.content.decode())
+                    high_count = 0
                     for xxxx in result['vulnerability_types']:
-                        message_push = message_push + '漏洞: ' + xxxx['name'] + '数量: ' + str(xxxx['count']) + '\n'
-                    print(message_push)
-                    self.push_wechat_group(message_push)
-                    self.init_high_count = high_count
-                else:
-                    self.init_high_count = high_count
-            except Exception as e:
-                print('监控出错了，请检查', e)
+                        high_count = high_count + xxxx['count']
+                    #print(high_count,init_high_count)
+                    if high_count!=init_high_count:
+                        current_date = str(strftime("%Y-%m-%d %H:%M:%S", gmtime()))
+                        message_push=str(socket.gethostname())+'\n'+current_date+'\n'
+                        for xxxx in result['vulnerability_types']:
+                            message_push = message_push+'漏洞: ' + xxxx['name'] + '数量: '+str(xxxx['count'])+'\n'
+                        print(message_push)
+                        self.push_wechat_group(message_push)
+                        init_high_count=high_count
+                    else:
+                        #print('高危漏洞数量无变化 ',high_count)
+                        init_high_count = high_count
+                except Exception as e:
+                    print('监控出错了，请检查',e)
+        except Exception as e:
+            print(e)
     # 获取扫描状态
     def get_scan_status(self):
         try:
             get_target_url = self.awvs_url + '/api/v1/me/stats'
             r = requests.get(get_target_url, headers=self.headers, timeout=30, verify=False)
             result = json.loads(r.content.decode())
+            Vuln_status = f"严重 {result['vuln_count']['crit']} 高危 {result['vuln_count']['high']} 中危 {result['vuln_count']['med']} 低危 {result['vuln_count']['low']}"
+
             print(f'目标: {result["targets_count"]}', 
                   f'扫描中: {result["scans_running_count"]}', 
                   f'等待扫描: {result["scans_waiting_count"]}', 
                   f'已扫描: {result["scans_conducted_count"]}', 
                   f'漏洞总数: {result["vulnerabilities_open_count"]}', 
-                  f'漏洞统计: {str(result["vuln_count"])}\n主要漏洞:'
+                  f'漏洞统计: {Vuln_status}\n主要漏洞:'
             )
             for xxxx in result['top_vulnerabilities']:
                 print(f'\t漏洞名称: {xxxx["name"]}  漏洞数量: {xxxx["count"]}')
@@ -131,7 +145,7 @@ class AWVSManager:
         except Exception as e:
             print('初始化失败，请检查config.ini文件中的awvs_url是否正确\n', e)
             sys.exit()
-        print(f"配置正确~\n平台地址: {self.awvs_url}\n{'*' * 68}")
+        print(f"配置正确~\n\t地址: {self.awvs_url}\n\t版本: Acunetix v{r.headers['x-acxv']}\n{'*' * 68}")
         self.get_scan_status()
     
     # 获取扫描器内所有目标
@@ -556,6 +570,7 @@ AWVS 批量添加，批量扫描，支持awvs批量联动被动扫描器等功�
 Author: s1g0day
 已支持版本：
 1. AWVS24
+2. AWVS25
 ********************************************************************
 1 【批量添加url到AWVS扫描器扫描】
 2 【删除扫描器内所有目标与扫描任务】
