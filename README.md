@@ -52,7 +52,8 @@ Acunetix-v25.1.250204093	默认禁止
 ```
 
 **注：脚本运行慢**
-我将Acunetix分别搭建在windows和linux环境，都是本地搭建，更推荐在linux上搭建，因为扫描速度更快
+
+我将Acunetix分别搭建在windows和linux环境，都是本地搭建。平台为linux时脚本运行较快，并且扫描速度更快
 
 # 版本更新
 
