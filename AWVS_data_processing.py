@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 # author: s1g0day
 # create: 2025-02-24 16:24
-# update: 2025-03-03 16:38
+# update: 2025-03-04 10:00
 
 import os
 import sys
@@ -119,14 +119,13 @@ class AWVSManager:
             get_target_url = self.awvs_url + '/api/v1/me/stats'
             r = requests.get(get_target_url, headers=self.headers, timeout=30, verify=False)
             result = json.loads(r.content.decode())
-            Vuln_status = f"严重 {result['vuln_count']['crit']} 高危 {result['vuln_count']['high']} 中危 {result['vuln_count']['med']} 低危 {result['vuln_count']['low']}"
+            Vuln_status = f"总数 {result['vulnerabilities_open_count']} 严重 {result['vuln_count']['crit']} 高危 {result['vuln_count']['high']} 中危 {result['vuln_count']['med']} 低危 {result['vuln_count']['low']}"
 
             print(f'目标: {result["targets_count"]}', 
                   f'扫描中: {result["scans_running_count"]}', 
                   f'等待扫描: {result["scans_waiting_count"]}', 
                   f'已扫描: {result["scans_conducted_count"]}', 
-                  f'漏洞总数: {result["vulnerabilities_open_count"]}', 
-                  f'漏洞统计: {Vuln_status}\n主要漏洞:'
+                  f'漏洞统计: {Vuln_status}\n主要漏洞:', 
             )
             for xxxx in result['top_vulnerabilities']:
                 print(f'\t漏洞名称: {xxxx["name"]}  漏洞数量: {xxxx["count"]}')
@@ -569,8 +568,8 @@ if __name__ == '__main__':
 AWVS 批量添加，批量扫描，支持awvs批量联动被动扫描器等功能
 Author: s1g0day
 已支持版本：
-1. AWVS24
-2. AWVS25
+\t1. AWVS24
+\t2. AWVS25
 ********************************************************************
 1 【批量添加url到AWVS扫描器扫描】
 2 【删除扫描器内所有目标与扫描任务】
@@ -581,24 +580,25 @@ Author: s1g0day
 7 【删除所有discovery内容】
 8 【删除所有报告】
 """)
-    selection = int(input('请输入数字:'))
-    if selection == 1:
-        awvs_manager.add_target()
-    elif selection == 2:
-        awvs_manager.delete_targets()
-    elif selection == 3:
-        awvs_manager.delete_task()
-    elif selection == 4:
-        awvs_manager.target_scan = True
-        awvs_manager.add_target()
-    elif selection == 5:
-        awvs_manager.push_wechat_group('已开启高危漏洞消息推送，需保持脚本前台运行，不会被结束')
-        awvs_manager.message_push()
-    elif selection == 6:
-        awvs_manager.delete_finish()
-    elif selection == 7:
-        awvs_manager.delete_discovery()
-    elif selection == 8:
-        awvs_manager.delete_reports()
-    else:
+    try:
+        selection = int(input('请输入数字:'))
+        if selection == 1:
+            awvs_manager.add_target()
+        elif selection == 2:
+            awvs_manager.delete_targets()
+        elif selection == 3:
+            awvs_manager.delete_task()
+        elif selection == 4:
+            awvs_manager.target_scan = True
+            awvs_manager.add_target()
+        elif selection == 5:
+            awvs_manager.push_wechat_group('已开启高危漏洞消息推送，需保持脚本前台运行，不会被结束')
+            awvs_manager.message_push()
+        elif selection == 6:
+            awvs_manager.delete_finish()
+        elif selection == 7:
+            awvs_manager.delete_discovery()
+        elif selection == 8:
+            awvs_manager.delete_reports()
+    except Exception as e:
         print('输入无效，请重新运行脚本并输入正确的数字。')
