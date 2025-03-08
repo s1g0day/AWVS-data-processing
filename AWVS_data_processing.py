@@ -2,7 +2,7 @@
 # -*- coding: UTF-8 -*-
 # author: s1g0day
 # create: 2025-02-24 16:24
-# update: 2025-03-04 10:00
+# update: 2025-03-08 10:30
 
 import os
 import sys
@@ -31,6 +31,11 @@ class AWVSManager:
         self.page = 1  # 初始化页码变量
         self.items_per_page = 100  # 每页的条目数
         self.total_count = 0  # 初始化总条目数变量
+        self.critical_count = 0  # 初始化严重漏洞数量变量
+        self.high_count = 0  # 初始化高危漏洞数量变量
+        self.medium_count = 0  # 初始化中危漏洞数量变量
+        self.low_count = 0  # 初始化低危漏洞数量变量
+        self.info_count = 0  # 初始化信息漏洞数量变量
 
         # 读取配置文件
         config_path = f"{os.path.dirname(os.path.abspath(__file__))}/config.ini"
@@ -113,13 +118,50 @@ class AWVSManager:
                     print('监控出错了，请检查',e)
         except Exception as e:
             print(e)
+    # 获取漏洞数量
+    def get_vuln_count(self):
+        quer = '/api/v1/scans?l=100'
+        try:
+            r = requests.get(self.awvs_url + quer, headers=self.headers, timeout=30, verify=False)
+            result = json.loads(r.content.decode())
+            total_count = result['pagination']['count']  # 从响应中获取总条目数
+            if int(total_count) == 0:
+                print('当前目标为空')
+                return 0
+        except Exception as e:
+            print('报错，获取总数失败', e)
+            return
+        # 计算总页数
+        total_pages = (total_count // self.items_per_page) + (1 if total_count % self.items_per_page > 0 else 0)  # 计算总页数
+        print(f"总计: {total_count}，共 {total_pages} 页")
+
+        while self.page <= total_pages:  # 确保循环直到总页数
+            try:
+                r = requests.get(self.awvs_url + quer, headers=self.headers, timeout=30, verify=False)
+                result = json.loads(r.content.decode())
+                # 获取漏洞数量
+                for i in result['scans']:
+                    self.total_count += i['current_session']['severity_counts']['critical'] + i['current_session']['severity_counts']['high'] + i['current_session']['severity_counts']['medium'] + i['current_session']['severity_counts']['low'] + i['current_session']['severity_counts']['info']
+                    self.critical_count += i['current_session']['severity_counts']['critical']
+                    self.high_count += i['current_session']['severity_counts']['high']
+                    self.medium_count += i['current_session']['severity_counts']['medium']
+                    self.low_count += i['current_session']['severity_counts']['low']
+                    self.info_count += i['current_session']['severity_counts']['info']
+                return self.total_count,self.critical_count,self.high_count,self.medium_count,self.low_count,self.info_count
+            except Exception as e:
+                print(e)
     # 获取扫描状态
     def get_scan_status(self):
         try:
             get_target_url = self.awvs_url + '/api/v1/me/stats'
             r = requests.get(get_target_url, headers=self.headers, timeout=30, verify=False)
             result = json.loads(r.content.decode())
-            Vuln_status = f"总数 {result['vulnerabilities_open_count']} 严重 {result['vuln_count']['crit']} 高危 {result['vuln_count']['high']} 中危 {result['vuln_count']['med']} 低危 {result['vuln_count']['low']}"
+            Vuln_status = self.get_vuln_count()
+            
+            if Vuln_status and Vuln_status[0] != 0:
+                Vuln_status = f"总数 {Vuln_status[0]} 严重 {Vuln_status[1]} 高危 {Vuln_status[2]} 中危 {Vuln_status[3]} 低危 {Vuln_status[4]} 信息 {Vuln_status[5]}"
+            else:
+                Vuln_status = f"总数 {result['vulnerabilities_open_count']} 严重 {result['vuln_count']['crit']} 高危 {result['vuln_count']['high']} 中危 {result['vuln_count']['med']} 低危 {result['vuln_count']['low']}"
 
             print(f'目标: {result["targets_count"]}', 
                   f'扫描中: {result["scans_running_count"]}', 
