@@ -137,7 +137,7 @@ class AWVSManager:
 
         while self.page <= total_pages:  # 确保循环直到总页数
             try:
-                r = requests.get(self.awvs_url + quer, headers=self.headers, timeout=30, verify=False)
+                r = requests.get(self.awvs_url + quer + '&c=' + str(self.page), headers=self.headers, timeout=30, verify=False)
                 result = json.loads(r.content.decode())
                 # 获取漏洞数量
                 for i in result['scans']:
@@ -158,7 +158,7 @@ class AWVSManager:
             result = json.loads(r.content.decode())
             Vuln_status = self.get_vuln_count()
             
-            if Vuln_status and Vuln_status[0] != 0:
+            if Vuln_status and Vuln_status[0] == 0:
                 Vuln_status = f"总数 {Vuln_status[0]} 严重 {Vuln_status[1]} 高危 {Vuln_status[2]} 中危 {Vuln_status[3]} 低危 {Vuln_status[4]} 信息 {Vuln_status[5]}"
             else:
                 Vuln_status = f"总数 {result['vulnerabilities_open_count']} 严重 {result['vuln_count']['crit']} 高危 {result['vuln_count']['high']} 中危 {result['vuln_count']['med']} 低危 {result['vuln_count']['low']}"
